@@ -1,0 +1,256 @@
+@{
+    ViewData["Title"] = "Gestión de Especialistas";
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-user-tie me-2"></i>Gestión de Especialistas</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#specialistModal" onclick="openCreateModal()">
+            <i class="fas fa-plus me-2"></i>Nuevo Especialista
+        </button>
+    </div>
+</div>
+
+<!-- Specialists Table -->
+<div class="card shadow">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" id="specialistsTable">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Email</th>
+                        <th>Estado</th>
+                        <th>Fecha Creación</th>
+                        <th width="120">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="5" class="text-center">
+                            <i class="fas fa-spinner fa-spin me-2"></i>Cargando...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Specialist Modal -->
+<div class="modal fade" id="specialistModal" tabindex="-1" aria-labelledby="specialistModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="specialistModalLabel">
+                    <i class="fas fa-user-tie me-2"></i>Nuevo Especialista
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="specialistForm">
+                <div class="modal-body">
+                    <input type="hidden" id="specialistId" value="">
+                    
+                    <div class="mb-3">
+                        <label for="specialistName" class="form-label">Nombre *</label>
+                        <input type="text" class="form-control" id="specialistName" name="name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="specialistEmail" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="specialistEmail" name="email">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="specialistActive" name="active" checked>
+                            <label class="form-check-label" for="specialistActive">
+                                Activo
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+$(document).ready(function() {
+    loadSpecialists();
+    
+    $('#specialistForm').on('submit', function(e) {
+        e.preventDefault();
+        saveSpecialist();
+    });
+});
+
+function loadSpecialists() {
+    $.ajax({
+        url: '/api/specialists',
+        type: 'GET',
+        success: function(response) {
+            if (response.success && response.data) {
+                updateSpecialistsTable(response.data);
+            } else {
+                showError('Error al cargar los especialistas');
+            }
+        },
+        error: function() {
+            showError('Error al conectar con el servidor');
+        }
+    });
+}
+
+function updateSpecialistsTable(specialists) {
+    const tbody = $('#specialistsTable tbody');
+    tbody.empty();
+    
+    if (specialists && specialists.length > 0) {
+        specialists.forEach(function(specialist) {
+            const statusBadge = specialist.active 
+                ? '<span class="badge bg-success">Activo</span>' 
+                : '<span class="badge bg-secondary">Inactivo</span>';
+            
+            const email = specialist.email || '-';
+            const createdAt = new Date(specialist.createdAt).toLocaleDateString();
+            
+            const row = `
+                <tr>
+                    <td><strong>${specialist.name}</strong></td>
+                    <td>${email}</td>
+                    <td>${statusBadge}</td>
+                    <td>${createdAt}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="editSpecialist(${specialist.id})" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteSpecialist(${specialist.id})" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+            tbody.append(row);
+        });
+    } else {
+        tbody.append('<tr><td colspan="5" class="text-center text-muted">No hay especialistas registrados</td></tr>');
+    }
+}
+
+function openCreateModal() {
+    $('#specialistId').val('');
+    $('#specialistName').val('');
+    $('#specialistEmail').val('');
+    $('#specialistActive').prop('checked', true);
+    $('#specialistModalLabel').html('<i class="fas fa-user-tie me-2"></i>Nuevo Especialista');
+}
+
+function editSpecialist(id) {
+    // Find the specialist data from the current table
+    const row = $(`button[onclick="editSpecialist(${id})"]`).closest('tr');
+    const name = row.find('td:first strong').text();
+    const email = row.find('td:nth-child(2)').text();
+    const isActive = row.find('.badge').hasClass('bg-success');
+    
+    $('#specialistId').val(id);
+    $('#specialistName').val(name);
+    $('#specialistEmail').val(email === '-' ? '' : email);
+    $('#specialistActive').prop('checked', isActive);
+    $('#specialistModalLabel').html('<i class="fas fa-edit me-2"></i>Editar Especialista');
+    
+    $('#specialistModal').modal('show');
+}
+
+function saveSpecialist() {
+    const id = $('#specialistId').val();
+    const data = {
+        name: $('#specialistName').val(),
+        email: $('#specialistEmail').val() || null,
+        active: $('#specialistActive').is(':checked')
+    };
+    
+    if (!data.name.trim()) {
+        alert('El nombre es requerido');
+        return;
+    }
+    
+    const url = id ? `/api/specialists/${id}` : '/api/specialists';
+    const method = id ? 'PUT' : 'POST';
+    
+    $.ajax({
+        url: url,
+        type: method,
+        contentType: 'application/json',
+        data: JSON.stringify(data),
+        success: function(response) {
+            if (response.success) {
+                $('#specialistModal').modal('hide');
+                loadSpecialists();
+                showSuccess(response.message);
+            } else {
+                showError(response.message);
+            }
+        },
+        error: function() {
+            showError('Error al guardar el especialista');
+        }
+    });
+}
+
+function deleteSpecialist(id) {
+    if (!confirm('¿Está seguro de que desea eliminar este especialista?')) {
+        return;
+    }
+    
+    $.ajax({
+        url: `/api/specialists/${id}`,
+        type: 'DELETE',
+        success: function(response) {
+            if (response.success) {
+                loadSpecialists();
+                showSuccess(response.message);
+            } else {
+                showError(response.message);
+            }
+        },
+        error: function() {
+            showError('Error al eliminar el especialista');
+        }
+    });
+}
+
+function showSuccess(message) {
+    showAlert(message, 'success');
+}
+
+function showError(message) {
+    showAlert(message, 'danger');
+}
+
+function showAlert(message, type) {
+    const alert = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    $('.border-bottom').after(alert);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(function() {
+        $('.alert').alert('close');
+    }, 5000);
+}
+</script>
+}

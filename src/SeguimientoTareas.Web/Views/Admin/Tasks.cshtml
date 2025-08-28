@@ -1,0 +1,481 @@
+@{
+    ViewData["Title"] = "Gestión de Plantillas de Tareas";
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-list-check me-2"></i>Plantillas de Tareas</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#taskTemplateModal" onclick="openCreateTemplateModal()">
+            <i class="fas fa-plus me-2"></i>Nueva Plantilla
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Templates List -->
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-clipboard-list me-2"></i>Plantillas
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group" id="templatesList">
+                    <div class="text-center">
+                        <i class="fas fa-spinner fa-spin me-2"></i>Cargando...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Stages List -->
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-tasks me-2"></i>Etapas
+                </h6>
+                <button type="button" class="btn btn-sm btn-success" id="addStageBtn" style="display: none;" 
+                        data-bs-toggle="modal" data-bs-target="#stageModal" onclick="openCreateStageModal()">
+                    <i class="fas fa-plus me-1"></i>Agregar Etapa
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="stagesContainer">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-arrow-left me-2"></i>Selecciona una plantilla para ver sus etapas
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Task Template Modal -->
+<div class="modal fade" id="taskTemplateModal" tabindex="-1" aria-labelledby="taskTemplateModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="taskTemplateModalLabel">
+                    <i class="fas fa-clipboard-list me-2"></i>Nueva Plantilla
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="taskTemplateForm">
+                <div class="modal-body">
+                    <input type="hidden" id="templateId" value="">
+                    
+                    <div class="mb-3">
+                        <label for="templateName" class="form-label">Nombre *</label>
+                        <input type="text" class="form-control" id="templateName" name="name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="templateDescription" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="templateDescription" name="description" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="templateActive" name="active" checked>
+                            <label class="form-check-label" for="templateActive">
+                                Activa
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Stage Modal -->
+<div class="modal fade" id="stageModal" tabindex="-1" aria-labelledby="stageModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="stageModalLabel">
+                    <i class="fas fa-tasks me-2"></i>Nueva Etapa
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="stageForm">
+                <div class="modal-body">
+                    <input type="hidden" id="stageId" value="">
+                    <input type="hidden" id="stageTemplateId" value="">
+                    
+                    <div class="mb-3">
+                        <label for="stageName" class="form-label">Nombre *</label>
+                        <input type="text" class="form-control" id="stageName" name="name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="stageDescription" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="stageDescription" name="description" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="stageDuration" class="form-label">Duración (días) *</label>
+                        <input type="number" class="form-control" id="stageDuration" name="durationDays" min="1" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+let selectedTemplateId = null;
+
+$(document).ready(function() {
+    loadTemplates();
+    
+    $('#taskTemplateForm').on('submit', function(e) {
+        e.preventDefault();
+        saveTemplate();
+    });
+    
+    $('#stageForm').on('submit', function(e) {
+        e.preventDefault();
+        saveStage();
+    });
+});
+
+function loadTemplates() {
+    $.ajax({
+        url: '/api/tasks/templates',
+        type: 'GET',
+        success: function(response) {
+            if (response.success && response.data) {
+                updateTemplatesList(response.data);
+            } else {
+                showError('Error al cargar las plantillas');
+            }
+        },
+        error: function() {
+            showError('Error al conectar con el servidor');
+        }
+    });
+}
+
+function updateTemplatesList(templates) {
+    const container = $('#templatesList');
+    container.empty();
+    
+    if (templates && templates.length > 0) {
+        templates.forEach(function(template) {
+            const statusBadge = template.active 
+                ? '<span class="badge bg-success ms-2">Activa</span>' 
+                : '<span class="badge bg-secondary ms-2">Inactiva</span>';
+            
+            const item = `
+                <div class="list-group-item list-group-item-action ${selectedTemplateId === template.id ? 'active' : ''}" 
+                     data-template-id="${template.id}" onclick="selectTemplate(${template.id})">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">${template.name}${statusBadge}</h6>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); editTemplate(${template.id})" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); deleteTemplate(${template.id})" title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="mb-1 text-muted">${template.description || 'Sin descripción'}</p>
+                    <small>Creada: ${new Date(template.createdAt).toLocaleDateString()}</small>
+                </div>
+            `;
+            container.append(item);
+        });
+    } else {
+        container.append('<div class="text-center text-muted">No hay plantillas registradas</div>');
+    }
+}
+
+function selectTemplate(templateId) {
+    selectedTemplateId = templateId;
+    $('.list-group-item').removeClass('active');
+    $(`[data-template-id="${templateId}"]`).addClass('active');
+    $('#addStageBtn').show();
+    loadStages(templateId);
+}
+
+function loadStages(templateId) {
+    $.ajax({
+        url: `/api/tasks/templates/${templateId}/stages`,
+        type: 'GET',
+        success: function(response) {
+            if (response.success && response.data) {
+                updateStagesList(response.data);
+            } else {
+                showError('Error al cargar las etapas');
+            }
+        },
+        error: function() {
+            showError('Error al conectar con el servidor');
+        }
+    });
+}
+
+function updateStagesList(stages) {
+    const container = $('#stagesContainer');
+    container.empty();
+    
+    if (stages && stages.length > 0) {
+        stages.sort((a, b) => a.ordinal - b.ordinal);
+        
+        stages.forEach(function(stage) {
+            const item = `
+                <div class="card mb-2">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="card-title mb-1">
+                                    <span class="badge bg-primary me-2">${stage.ordinal}</span>
+                                    ${stage.name}
+                                </h6>
+                                <p class="card-text text-muted mb-1">${stage.description || 'Sin descripción'}</p>
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>${stage.durationDays} días
+                                </small>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary" onclick="editStage(${stage.id})" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteStage(${stage.id})" title="Eliminar">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.append(item);
+        });
+    } else {
+        container.append('<div class="text-center text-muted">No hay etapas definidas</div>');
+    }
+}
+
+function openCreateTemplateModal() {
+    $('#templateId').val('');
+    $('#templateName').val('');
+    $('#templateDescription').val('');
+    $('#templateActive').prop('checked', true);
+    $('#taskTemplateModalLabel').html('<i class="fas fa-clipboard-list me-2"></i>Nueva Plantilla');
+}
+
+function openCreateStageModal() {
+    $('#stageId').val('');
+    $('#stageTemplateId').val(selectedTemplateId);
+    $('#stageName').val('');
+    $('#stageDescription').val('');
+    $('#stageDuration').val('');
+    $('#stageModalLabel').html('<i class="fas fa-tasks me-2"></i>Nueva Etapa');
+}
+
+function editTemplate(id) {
+    // Find template data from current list
+    const item = $(`[data-template-id="${id}"]`);
+    const name = item.find('h6').text().replace('Activa', '').replace('Inactiva', '').trim();
+    const description = item.find('p').text();
+    const isActive = item.find('.badge').hasClass('bg-success');
+    
+    $('#templateId').val(id);
+    $('#templateName').val(name);
+    $('#templateDescription').val(description === 'Sin descripción' ? '' : description);
+    $('#templateActive').prop('checked', isActive);
+    $('#taskTemplateModalLabel').html('<i class="fas fa-edit me-2"></i>Editar Plantilla');
+    
+    $('#taskTemplateModal').modal('show');
+}
+
+function saveTemplate() {
+    const id = $('#templateId').val();
+    const data = {
+        name: $('#templateName').val(),
+        description: $('#templateDescription').val() || null,
+        active: $('#templateActive').is(':checked')
+    };
+    
+    if (!data.name.trim()) {
+        alert('El nombre es requerido');
+        return;
+    }
+    
+    const url = id ? `/api/tasks/templates/${id}` : '/api/tasks/templates';
+    const method = id ? 'PUT' : 'POST';
+    
+    $.ajax({
+        url: url,
+        type: method,
+        contentType: 'application/json',
+        data: JSON.stringify(data),
+        success: function(response) {
+            if (response.success) {
+                $('#taskTemplateModal').modal('hide');
+                loadTemplates();
+                showSuccess(response.message);
+            } else {
+                showError(response.message);
+            }
+        },
+        error: function() {
+            showError('Error al guardar la plantilla');
+        }
+    });
+}
+
+function deleteTemplate(id) {
+    if (!confirm('¿Está seguro de que desea eliminar esta plantilla?')) {
+        return;
+    }
+    
+    $.ajax({
+        url: `/api/tasks/templates/${id}`,
+        type: 'DELETE',
+        success: function(response) {
+            if (response.success) {
+                if (selectedTemplateId === id) {
+                    selectedTemplateId = null;
+                    $('#addStageBtn').hide();
+                    $('#stagesContainer').html('<div class="text-center text-muted"><i class="fas fa-arrow-left me-2"></i>Selecciona una plantilla para ver sus etapas</div>');
+                }
+                loadTemplates();
+                showSuccess(response.message);
+            } else {
+                showError(response.message);
+            }
+        },
+        error: function() {
+            showError('Error al eliminar la plantilla');
+        }
+    });
+}
+
+function editStage(id) {
+    // Find stage data from current list
+    const card = $(`button[onclick="editStage(${id})"]`).closest('.card');
+    const name = card.find('.card-title').text().replace(/^\d+\s*/, '').trim();
+    const description = card.find('.card-text').text();
+    const duration = card.find('small').text().match(/\d+/)[0];
+    
+    $('#stageId').val(id);
+    $('#stageTemplateId').val(selectedTemplateId);
+    $('#stageName').val(name);
+    $('#stageDescription').val(description === 'Sin descripción' ? '' : description);
+    $('#stageDuration').val(duration);
+    $('#stageModalLabel').html('<i class="fas fa-edit me-2"></i>Editar Etapa');
+    
+    $('#stageModal').modal('show');
+}
+
+function saveStage() {
+    const id = $('#stageId').val();
+    const data = {
+        name: $('#stageName').val(),
+        description: $('#stageDescription').val() || null,
+        durationDays: parseInt($('#stageDuration').val())
+    };
+    
+    if (!data.name.trim()) {
+        alert('El nombre es requerido');
+        return;
+    }
+    
+    if (!data.durationDays || data.durationDays <= 0) {
+        alert('La duración debe ser mayor a 0');
+        return;
+    }
+    
+    const url = id ? `/api/tasks/stages/${id}` : `/api/tasks/templates/${selectedTemplateId}/stages`;
+    const method = id ? 'PUT' : 'POST';
+    
+    $.ajax({
+        url: url,
+        type: method,
+        contentType: 'application/json',
+        data: JSON.stringify(data),
+        success: function(response) {
+            if (response.success) {
+                $('#stageModal').modal('hide');
+                loadStages(selectedTemplateId);
+                showSuccess(response.message);
+            } else {
+                showError(response.message);
+            }
+        },
+        error: function() {
+            showError('Error al guardar la etapa');
+        }
+    });
+}
+
+function deleteStage(id) {
+    if (!confirm('¿Está seguro de que desea eliminar esta etapa?')) {
+        return;
+    }
+    
+    $.ajax({
+        url: `/api/tasks/stages/${id}`,
+        type: 'DELETE',
+        success: function(response) {
+            if (response.success) {
+                loadStages(selectedTemplateId);
+                showSuccess(response.message);
+            } else {
+                showError(response.message);
+            }
+        },
+        error: function() {
+            showError('Error al eliminar la etapa');
+        }
+    });
+}
+
+function showSuccess(message) {
+    showAlert(message, 'success');
+}
+
+function showError(message) {
+    showAlert(message, 'danger');
+}
+
+function showAlert(message, type) {
+    const alert = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    $('.border-bottom').after(alert);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(function() {
+        $('.alert').alert('close');
+    }, 5000);
+}
+</script>
+}

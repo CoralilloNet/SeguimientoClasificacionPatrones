@@ -1,0 +1,218 @@
+@{
+    ViewData["Title"] = "Dashboard Administrativo";
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-chart-bar me-2"></i>Dashboard Administrativo</h1>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4" id="statsCards">
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Tareas Totales
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalTasks">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            En Progreso
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="inProgressTasks">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clock fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Completadas
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="completedTasks">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Atrasadas
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="overdueTasks">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- User Progress Table -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">
+            <i class="fas fa-users me-2"></i>Progreso por Usuario
+        </h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="userProgressTable">
+                <thead>
+                    <tr>
+                        <th>Usuario</th>
+                        <th>Total</th>
+                        <th>En Progreso</th>
+                        <th>Completadas</th>
+                        <th>Atrasadas</th>
+                        <th>Progreso Promedio</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="6" class="text-center">
+                            <i class="fas fa-spinner fa-spin me-2"></i>Cargando...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<style>
+.border-left-primary {
+    border-left: 0.25rem solid #4e73df !important;
+}
+
+.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+
+.border-left-info {
+    border-left: 0.25rem solid #36b9cc !important;
+}
+
+.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+</style>
+
+<script>
+$(document).ready(function() {
+    loadDashboardData();
+    
+    function loadDashboardData() {
+        $.ajax({
+            url: '/api/admin/dashboard',
+            type: 'GET',
+            success: function(response) {
+                if (response.success && response.data) {
+                    updateStatsCards(response.data);
+                    updateUserProgressTable(response.data.userSummaries);
+                } else {
+                    showError('Error al cargar los datos del dashboard');
+                }
+            },
+            error: function() {
+                showError('Error al conectar con el servidor');
+            }
+        });
+    }
+    
+    function updateStatsCards(data) {
+        $('#totalTasks').text(data.totalTasks);
+        $('#inProgressTasks').text(data.inProgressTasks);
+        $('#completedTasks').text(data.completedTasks);
+        $('#overdueTasks').text(data.overdueTasks);
+    }
+    
+    function updateUserProgressTable(userSummaries) {
+        const tbody = $('#userProgressTable tbody');
+        tbody.empty();
+        
+        if (userSummaries && userSummaries.length > 0) {
+            userSummaries.forEach(function(user) {
+                const progressBar = `
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" 
+                             style="width: ${user.averageProgress}%" 
+                             aria-valuenow="${user.averageProgress}" 
+                             aria-valuemin="0" aria-valuemax="100">
+                            ${Math.round(user.averageProgress)}%
+                        </div>
+                    </div>
+                `;
+                
+                const row = `
+                    <tr>
+                        <td><strong>${user.userName}</strong></td>
+                        <td><span class="badge bg-secondary">${user.totalTasks}</span></td>
+                        <td><span class="badge bg-primary">${user.inProgressTasks}</span></td>
+                        <td><span class="badge bg-success">${user.completedTasks}</span></td>
+                        <td><span class="badge ${user.overdueTasks > 0 ? 'bg-danger' : 'bg-light text-dark'}">${user.overdueTasks}</span></td>
+                        <td>${progressBar}</td>
+                    </tr>
+                `;
+                tbody.append(row);
+            });
+        } else {
+            tbody.append('<tr><td colspan="6" class="text-center text-muted">No hay datos disponibles</td></tr>');
+        }
+    }
+    
+    function showError(message) {
+        $('#statsCards').prepend(`
+            <div class="col-12">
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            </div>
+        `);
+    }
+});
+</script>
+}

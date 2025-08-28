@@ -1,0 +1,456 @@
+@{
+    ViewData["Title"] = "Mis Tareas";
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-tasks me-2"></i>Mis Tareas</h1>
+</div>
+
+<!-- Tasks Container -->
+<div id="tasksContainer">
+    <div class="text-center">
+        <i class="fas fa-spinner fa-spin me-2"></i>Cargando tareas...
+    </div>
+</div>
+
+<!-- Update Progress Modal -->
+<div class="modal fade" id="progressModal" tabindex="-1" aria-labelledby="progressModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="progressModalLabel">
+                    <i class="fas fa-chart-line me-2"></i>Actualizar Progreso
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="progressForm">
+                <div class="modal-body">
+                    <input type="hidden" id="stageIdForProgress" value="">
+                    
+                    <div class="mb-3">
+                        <label for="progressPercent" class="form-label">Progreso (%)</label>
+                        <input type="range" class="form-range" id="progressPercent" name="progressPercent" 
+                               min="0" max="100" value="0" oninput="updateProgressDisplay(this.value)">
+                        <div class="d-flex justify-content-between">
+                            <small>0%</small>
+                            <span id="progressDisplay" class="fw-bold">0%</span>
+                            <small>100%</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="progressNotes" class="form-label">Notas (opcional)</label>
+                        <textarea class="form-control" id="progressNotes" name="notes" rows="3" 
+                                  placeholder="Describe el progreso realizado..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Actualizar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Evidence Modal -->
+<div class="modal fade" id="evidenceModal" tabindex="-1" aria-labelledby="evidenceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="evidenceModalLabel">
+                    <i class="fas fa-upload me-2"></i>Subir Evidencia
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="evidenceForm" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <input type="hidden" id="stageIdForEvidence" value="">
+                    
+                    <div class="mb-3">
+                        <label for="evidenceFile" class="form-label">Archivo *</label>
+                        <input type="file" class="form-control" id="evidenceFile" name="file" required
+                               accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx">
+                        <div class="form-text">Tipos permitidos: PDF, JPG, PNG, DOCX, XLSX (máx. 20MB)</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="evidenceNotes" class="form-label">Notas</label>
+                        <textarea class="form-control" id="evidenceNotes" name="notes" rows="3" 
+                                  placeholder="Describe la evidencia..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload me-2"></i>Subir
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<style>
+.task-card {
+    border-left: 4px solid #007bff;
+    transition: transform 0.2s;
+}
+
+.task-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.stage-card {
+    border-left: 3px solid #6c757d;
+}
+
+.stage-card.stage-overdue {
+    border-left-color: #dc3545;
+    background-color: #fff5f5;
+}
+
+.stage-card.stage-complete {
+    border-left-color: #28a745;
+    background-color: #f8fff9;
+}
+
+.stage-card.stage-active {
+    border-left-color: #ffc107;
+    background-color: #fffef8;
+}
+</style>
+
+<script>
+$(document).ready(function() {
+    loadMyTasks();
+    
+    $('#progressForm').on('submit', function(e) {
+        e.preventDefault();
+        updateStageProgress();
+    });
+    
+    $('#evidenceForm').on('submit', function(e) {
+        e.preventDefault();
+        uploadEvidence();
+    });
+});
+
+function loadMyTasks() {
+    $.ajax({
+        url: '/api/assignments/my',
+        type: 'GET',
+        success: function(response) {
+            if (response.success && response.data) {
+                displayTasks(response.data);
+            } else {
+                showError('Error al cargar las tareas');
+            }
+        },
+        error: function() {
+            showError('Error al conectar con el servidor');
+        }
+    });
+}
+
+function displayTasks(tasks) {
+    const container = $('#tasksContainer');
+    container.empty();
+    
+    if (tasks && tasks.length > 0) {
+        tasks.forEach(function(task) {
+            const taskCard = createTaskCard(task);
+            container.append(taskCard);
+            loadTaskDetails(task.id);
+        });
+    } else {
+        container.append(`
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-inbox fa-3x mb-3"></i>
+                <h5>No tienes tareas asignadas</h5>
+                <p>Cuando tengas tareas asignadas aparecerán aquí.</p>
+            </div>
+        `);
+    }
+}
+
+function createTaskCard(task) {
+    const dueDate = task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'Sin fecha límite';
+    const createdDate = new Date(task.createdAt).toLocaleDateString();
+    
+    return `
+        <div class="card task-card mb-4 shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-clipboard-list me-2"></i>${task.title}
+                </h5>
+                <div class="text-muted">
+                    <small><i class="fas fa-calendar me-1"></i>Vence: ${dueDate}</small>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="text-muted mb-2">${task.description || 'Sin descripción'}</p>
+                        <div class="mb-2">
+                            <small class="text-muted">
+                                <strong>Plantilla:</strong> ${task.taskTemplateName}<br>
+                                <strong>Especialista:</strong> ${task.specialistName || 'No asignado'}<br>
+                                <strong>Asignado por:</strong> ${task.assignedByUserName}<br>
+                                <strong>Creado:</strong> ${createdDate}
+                            </small>
+                        </div>
+                        <div class="progress mb-2">
+                            <div class="progress-bar" id="progress-${task.id}" role="progressbar" 
+                                 style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                0%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Etapas:</h6>
+                        <div id="stages-${task.id}">
+                            <div class="text-center">
+                                <i class="fas fa-spinner fa-spin"></i> Cargando...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function loadTaskDetails(taskId) {
+    $.ajax({
+        url: `/api/assignments/${taskId}`,
+        type: 'GET',
+        success: function(response) {
+            if (response.success && response.data) {
+                updateTaskDetails(taskId, response.data);
+            }
+        },
+        error: function() {
+            $(`#stages-${taskId}`).html('<div class="text-danger">Error al cargar etapas</div>');
+        }
+    });
+}
+
+function updateTaskDetails(taskId, data) {
+    // Update overall progress
+    const progressBar = $(`#progress-${taskId}`);
+    const progress = Math.round(data.overallProgress);
+    progressBar.css('width', progress + '%')
+              .attr('aria-valuenow', progress)
+              .text(progress + '%');
+    
+    if (progress < 25) {
+        progressBar.removeClass('bg-warning bg-success').addClass('bg-danger');
+    } else if (progress < 75) {
+        progressBar.removeClass('bg-danger bg-success').addClass('bg-warning');
+    } else {
+        progressBar.removeClass('bg-danger bg-warning').addClass('bg-success');
+    }
+    
+    // Update stages
+    const stagesContainer = $(`#stages-${taskId}`);
+    stagesContainer.empty();
+    
+    if (data.stages && data.stages.length > 0) {
+        data.stages.forEach(function(stage) {
+            const stageCard = createStageCard(stage);
+            stagesContainer.append(stageCard);
+        });
+    } else {
+        stagesContainer.append('<div class="text-muted">No hay etapas definidas</div>');
+    }
+}
+
+function createStageCard(stage) {
+    let stageClass = 'stage-card';
+    let statusIcon = 'fas fa-clock text-warning';
+    let statusText = 'Pendiente';
+    
+    if (stage.isComplete) {
+        stageClass += ' stage-complete';
+        statusIcon = 'fas fa-check-circle text-success';
+        statusText = 'Completada';
+    } else if (stage.isOverdue) {
+        stageClass += ' stage-overdue';
+        statusIcon = 'fas fa-exclamation-triangle text-danger';
+        statusText = 'Atrasada';
+    } else if (stage.progressPercent > 0) {
+        stageClass += ' stage-active';
+        statusIcon = 'fas fa-play-circle text-warning';
+        statusText = 'En progreso';
+    }
+    
+    const targetDate = stage.targetDate ? new Date(stage.targetDate).toLocaleDateString() : 'No definida';
+    const completedDate = stage.completedAt ? new Date(stage.completedAt).toLocaleDateString() : '';
+    
+    return `
+        <div class="card ${stageClass} mb-2">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="mb-0">
+                        <span class="badge bg-primary me-2">${stage.ordinal}</span>
+                        ${stage.name}
+                    </h6>
+                    <i class="${statusIcon}" title="${statusText}"></i>
+                </div>
+                
+                <p class="text-muted small mb-2">${stage.description || 'Sin descripción'}</p>
+                
+                <div class="row align-items-center">
+                    <div class="col-6">
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar ${stage.isComplete ? 'bg-success' : (stage.progressPercent > 0 ? 'bg-warning' : 'bg-secondary')}" 
+                                 style="width: ${stage.progressPercent}%"></div>
+                        </div>
+                        <small class="text-muted">${stage.progressPercent}% completado</small>
+                    </div>
+                    <div class="col-6 text-end">
+                        ${!stage.isComplete ? `
+                            <button class="btn btn-sm btn-outline-primary me-1" 
+                                    onclick="openProgressModal(${stage.id}, ${stage.progressPercent})" title="Actualizar progreso">
+                                <i class="fas fa-chart-line"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-success" 
+                                    onclick="openEvidenceModal(${stage.id})" title="Subir evidencia">
+                                <i class="fas fa-upload"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+                
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <strong>Fecha objetivo:</strong> ${targetDate}
+                        ${completedDate ? `<br><strong>Completada:</strong> ${completedDate}` : ''}
+                    </small>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function openProgressModal(stageId, currentProgress) {
+    $('#stageIdForProgress').val(stageId);
+    $('#progressPercent').val(currentProgress);
+    $('#progressNotes').val('');
+    updateProgressDisplay(currentProgress);
+    $('#progressModal').modal('show');
+}
+
+function openEvidenceModal(stageId) {
+    $('#stageIdForEvidence').val(stageId);
+    $('#evidenceFile').val('');
+    $('#evidenceNotes').val('');
+    $('#evidenceModal').modal('show');
+}
+
+function updateProgressDisplay(value) {
+    $('#progressDisplay').text(value + '%');
+}
+
+function updateStageProgress() {
+    const stageId = $('#stageIdForProgress').val();
+    const progressPercent = $('#progressPercent').val();
+    const notes = $('#progressNotes').val();
+    
+    $.ajax({
+        url: `/api/stages/${stageId}/progress`,
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            progressPercent: parseInt(progressPercent),
+            notes: notes || null
+        }),
+        success: function(response) {
+            if (response.success) {
+                $('#progressModal').modal('hide');
+                loadMyTasks(); // Reload to show updated progress
+                showSuccess(response.message);
+            } else {
+                showError(response.message);
+            }
+        },
+        error: function() {
+            showError('Error al actualizar el progreso');
+        }
+    });
+}
+
+function uploadEvidence() {
+    const stageId = $('#stageIdForEvidence').val();
+    const formData = new FormData();
+    
+    const fileInput = $('#evidenceFile')[0];
+    if (!fileInput.files.length) {
+        alert('Por favor selecciona un archivo');
+        return;
+    }
+    
+    formData.append('file', fileInput.files[0]);
+    formData.append('notes', $('#evidenceNotes').val());
+    
+    // Disable submit button
+    const submitBtn = $('#evidenceForm button[type="submit"]');
+    const originalText = submitBtn.html();
+    submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Subiendo...');
+    
+    $.ajax({
+        url: `/api/stages/${stageId}/evidence`,
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                $('#evidenceModal').modal('hide');
+                showSuccess(response.message);
+            } else {
+                showError(response.message);
+            }
+            submitBtn.prop('disabled', false).html(originalText);
+        },
+        error: function() {
+            showError('Error al subir la evidencia');
+            submitBtn.prop('disabled', false).html(originalText);
+        }
+    });
+}
+
+function showSuccess(message) {
+    showAlert(message, 'success');
+}
+
+function showError(message) {
+    showAlert(message, 'danger');
+}
+
+function showAlert(message, type) {
+    const alert = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    $('.border-bottom').after(alert);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(function() {
+        $('.alert').alert('close');
+    }, 5000);
+}
+</script>
+}
