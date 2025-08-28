@@ -1,0 +1,261 @@
+@{
+    ViewData["Title"] = "Gestión de Asignaciones";
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-clipboard-list me-2"></i>Gestión de Asignaciones</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#assignmentModal" onclick="openCreateModal()">
+            <i class="fas fa-plus me-2"></i>Nueva Asignación
+        </button>
+    </div>
+</div>
+
+<!-- Assignments Table -->
+<div class="card shadow">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" id="assignmentsTable">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Título</th>
+                        <th>Asignado a</th>
+                        <th>Plantilla</th>
+                        <th>Especialista</th>
+                        <th>Fecha Inicio</th>
+                        <th>Fecha Límite</th>
+                        <th>Progreso</th>
+                        <th width="100">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="8" class="text-center">
+                            <i class="fas fa-spinner fa-spin me-2"></i>Cargando...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Assignment Modal -->
+<div class="modal fade" id="assignmentModal" tabindex="-1" aria-labelledby="assignmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="assignmentModalLabel">
+                    <i class="fas fa-clipboard-list me-2"></i>Nueva Asignación
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="assignmentForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="assignmentTitle" class="form-label">Título *</label>
+                                <input type="text" class="form-control" id="assignmentTitle" name="title" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="assignmentTemplate" class="form-label">Plantilla de Tarea *</label>
+                                <select class="form-select" id="assignmentTemplate" name="taskTemplateId" required>
+                                    <option value="">Selecciona una plantilla...</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="assignmentUser" class="form-label">Asignar a Usuario *</label>
+                                <select class="form-select" id="assignmentUser" name="assignedToUserId" required>
+                                    <option value="">Selecciona un usuario...</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="assignmentSpecialist" class="form-label">Especialista</label>
+                                <select class="form-select" id="assignmentSpecialist" name="specialistId">
+                                    <option value="">Sin especialista asignado</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="assignmentStartDate" class="form-label">Fecha de Inicio *</label>
+                                <input type="date" class="form-control" id="assignmentStartDate" name="startDate" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="assignmentDueDate" class="form-label">Fecha Límite</label>
+                                <input type="date" class="form-control" id="assignmentDueDate" name="dueDate">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="assignmentDescription" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="assignmentDescription" name="description" rows="3" 
+                                  placeholder="Describe los objetivos de esta asignación..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Crear Asignación
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+$(document).ready(function() {
+    loadAssignments();
+    loadFormData();
+    
+    $('#assignmentForm').on('submit', function(e) {
+        e.preventDefault();
+        createAssignment();
+    });
+    
+    // Set default start date to today
+    $('#assignmentStartDate').val(new Date().toISOString().split('T')[0]);
+});
+
+function loadAssignments() {
+    // For demo purposes, we'll show a placeholder since we don't have a full list endpoint
+    // In a real implementation, you'd create a GET /api/assignments endpoint
+    const tbody = $('#assignmentsTable tbody');
+    tbody.html(`
+        <tr>
+            <td colspan="8" class="text-center text-muted">
+                <i class="fas fa-info-circle me-2"></i>
+                Las asignaciones se muestran en el dashboard y en la vista "Mis Tareas" de cada usuario
+            </td>
+        </tr>
+    `);
+}
+
+function loadFormData() {
+    // Load task templates
+    $.ajax({
+        url: '/api/tasks/templates',
+        type: 'GET',
+        success: function(response) {
+            if (response.success && response.data) {
+                const select = $('#assignmentTemplate');
+                select.html('<option value="">Selecciona una plantilla...</option>');
+                response.data.filter(t => t.active).forEach(function(template) {
+                    select.append(`<option value="${template.id}">${template.name}</option>`);
+                });
+            }
+        }
+    });
+    
+    // Load specialists
+    $.ajax({
+        url: '/api/specialists',
+        type: 'GET',
+        success: function(response) {
+            if (response.success && response.data) {
+                const select = $('#assignmentSpecialist');
+                select.html('<option value="">Sin especialista asignado</option>');
+                response.data.filter(s => s.active).forEach(function(specialist) {
+                    select.append(`<option value="${specialist.id}">${specialist.name}</option>`);
+                });
+            }
+        }
+    });
+    
+    // Load users (in a real app, you'd have a dedicated endpoint for this)
+    // For now, we'll add some static options based on our sample data
+    const userSelect = $('#assignmentUser');
+    userSelect.html(`
+        <option value="">Selecciona un usuario...</option>
+        <option value="2">Juan Pérez</option>
+        <option value="3">María González</option>
+        <option value="4">Carlos Rodríguez</option>
+    `);
+}
+
+function openCreateModal() {
+    $('#assignmentForm')[0].reset();
+    $('#assignmentStartDate').val(new Date().toISOString().split('T')[0]);
+    loadFormData();
+}
+
+function createAssignment() {
+    const data = {
+        taskTemplateId: parseInt($('#assignmentTemplate').val()),
+        title: $('#assignmentTitle').val(),
+        description: $('#assignmentDescription').val() || null,
+        assignedToUserId: parseInt($('#assignmentUser').val()),
+        specialistId: $('#assignmentSpecialist').val() ? parseInt($('#assignmentSpecialist').val()) : null,
+        startDate: $('#assignmentStartDate').val(),
+        dueDate: $('#assignmentDueDate').val() || null
+    };
+    
+    // Validation
+    if (!data.taskTemplateId || !data.title.trim() || !data.assignedToUserId || !data.startDate) {
+        alert('Por favor completa todos los campos obligatorios');
+        return;
+    }
+    
+    // Disable submit button
+    const submitBtn = $('#assignmentForm button[type="submit"]');
+    const originalText = submitBtn.html();
+    submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Creando...');
+    
+    $.ajax({
+        url: '/api/assignments',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(data),
+        success: function(response) {
+            if (response.success) {
+                $('#assignmentModal').modal('hide');
+                loadAssignments();
+                showSuccess(response.message);
+            } else {
+                showError(response.message);
+            }
+            submitBtn.prop('disabled', false).html(originalText);
+        },
+        error: function() {
+            showError('Error al crear la asignación');
+            submitBtn.prop('disabled', false).html(originalText);
+        }
+    });
+}
+
+function showSuccess(message) {
+    showAlert(message, 'success');
+}
+
+function showError(message) {
+    showAlert(message, 'danger');
+}
+
+function showAlert(message, type) {
+    const alert = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    $('.border-bottom').after(alert);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(function() {
+        $('.alert').alert('close');
+    }, 5000);
+}
+</script>
+}

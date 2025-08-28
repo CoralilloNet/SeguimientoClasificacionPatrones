@@ -127,10 +127,10 @@ GO
 
 -- Insert sample users with hashed passwords
 -- Password for all users is "admin" hashed with PBKDF2
--- Salt: 0x1234567890ABCDEF1234567890ABCDEF (16 bytes)
--- Hash: PBKDF2-SHA1 with 10000 iterations
+-- We'll use a simple approach for the demo - in production, use proper PBKDF2
 
 DECLARE @Salt VARBINARY(16) = 0x1234567890ABCDEF1234567890ABCDEF;
+-- This is a placeholder hash - the actual hashing will be done by the application
 DECLARE @AdminHash VARBINARY(64) = 0x2E5F7F2E8C8A1B3D4E6F7890ABCDEF123456789012345678901234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890AB;
 
 -- Admin user
