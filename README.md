@@ -117,7 +117,7 @@ src/
     ├── Data/                         # Capa de acceso a datos
     │   └── Db.cs                     # Helper para ADO.NET
     ├── Models/                       # Modelos de datos
-    ├── Services/                     # Servicios (hash de contraseñas, etc.)
+    ├── Services/                     # Servicios (autenticación, etc.)
     ├── Views/                        # Vistas Razor (sin lógica)
     │   ├── Account/                  # Vistas de autenticación
     │   ├── Admin/                    # Vistas administrativas
