@@ -42,7 +42,7 @@ namespace SeguimientoTareas.Web.Controllers
 
                 // Get user from database
                 const string sql = @"
-                    SELECT Id, Email, FullName, PasswordHash, PasswordSalt, IsAdmin, IsActive 
+                    SELECT Id, Email, FullName, Password, IsAdmin, IsActive 
                     FROM Users 
                     WHERE Email = @Email AND IsActive = 1";
 
@@ -51,10 +51,9 @@ namespace SeguimientoTareas.Web.Controllers
                     Id = reader.GetInt32(0), // Id
                     Email = reader.GetString(1), // Email 
                     FullName = reader.GetString(2), // FullName
-                    PasswordHash = (byte[])reader[3], // PasswordHash
-                    PasswordSalt = (byte[])reader[4], // PasswordSalt
-                    IsAdmin = reader.GetBoolean(5), // IsAdmin
-                    IsActive = reader.GetBoolean(6) // IsActive
+                    Password = reader.GetString(3), // Password
+                    IsAdmin = reader.GetBoolean(4), // IsAdmin
+                    IsActive = reader.GetBoolean(5) // IsActive
                 }, Db.CreateParameter("@Email", request.Email));
 
                 if (user == null)
@@ -63,7 +62,7 @@ namespace SeguimientoTareas.Web.Controllers
                 }
 
                 // Verify password
-                if (!_passwordService.VerifyPassword(request.Password, user.PasswordHash, user.PasswordSalt))
+                if (!_passwordService.VerifyPassword(request.Password, user.Password))
                 {
                     return Json(new ApiResponse { Success = false, Message = "Credenciales inválidas" });
                 }

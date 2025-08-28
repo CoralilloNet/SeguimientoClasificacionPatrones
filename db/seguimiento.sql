@@ -33,8 +33,7 @@ CREATE TABLE Users (
     Id INT IDENTITY(1,1) PRIMARY KEY,
     Email NVARCHAR(256) UNIQUE NOT NULL,
     FullName NVARCHAR(256) NOT NULL,
-    PasswordHash VARBINARY(64) NOT NULL,
-    PasswordSalt VARBINARY(16) NOT NULL,
+    Password NVARCHAR(256) NOT NULL,
     IsAdmin BIT NOT NULL DEFAULT 0,
     IsActive BIT NOT NULL DEFAULT 1,
     CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
@@ -125,24 +124,19 @@ GO
 
 -- Sample data insertion
 
--- Insert sample users with hashed passwords
--- Password for all users is "admin" hashed with PBKDF2
--- We'll use a simple approach for the demo - in production, use proper PBKDF2
-
-DECLARE @Salt VARBINARY(16) = 0x1234567890ABCDEF1234567890ABCDEF;
--- This is a placeholder hash - the actual hashing will be done by the application
-DECLARE @AdminHash VARBINARY(64) = 0x2E5F7F2E8C8A1B3D4E6F7890ABCDEF123456789012345678901234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890AB;
+-- Insert sample users with plain text passwords
+-- Password for all users is "admin" stored as plain text
 
 -- Admin user
-INSERT INTO Users (Email, FullName, PasswordHash, PasswordSalt, IsAdmin, IsActive) 
-VALUES ('admin@example.com', 'Administrador', @AdminHash, @Salt, 1, 1);
+INSERT INTO Users (Email, FullName, Password, IsAdmin, IsActive) 
+VALUES ('admin@example.com', 'Administrador', 'admin', 1, 1);
 
 -- Regular users
-INSERT INTO Users (Email, FullName, PasswordHash, PasswordSalt, IsAdmin, IsActive) 
+INSERT INTO Users (Email, FullName, Password, IsAdmin, IsActive) 
 VALUES 
-    ('juan.perez@example.com', 'Juan Pérez', @AdminHash, @Salt, 0, 1),
-    ('maria.gonzalez@example.com', 'María González', @AdminHash, @Salt, 0, 1),
-    ('carlos.rodriguez@example.com', 'Carlos Rodríguez', @AdminHash, @Salt, 0, 1);
+    ('juan.perez@example.com', 'Juan Pérez', 'admin', 0, 1),
+    ('maria.gonzalez@example.com', 'María González', 'admin', 0, 1),
+    ('carlos.rodriguez@example.com', 'Carlos Rodríguez', 'admin', 0, 1);
 GO
 
 -- Insert sample specialists
