@@ -117,7 +117,7 @@ src/
     ├── Data/                         # Capa de acceso a datos
     │   └── Db.cs                     # Helper para ADO.NET
     ├── Models/                       # Modelos de datos
-    ├── Services/                     # Servicios (hash de contraseñas, etc.)
+    ├── Services/                     # Servicios (autenticación, etc.)
     ├── Views/                        # Vistas Razor (sin lógica)
     │   ├── Account/                  # Vistas de autenticación
     │   ├── Admin/                    # Vistas administrativas
@@ -136,7 +136,7 @@ db/
 - **ASP.NET Core 8 MVC** - Framework web
 - **ADO.NET con SqlClient** - Acceso a datos sin ORM
 - **Cookie Authentication** - Autenticación sin Identity
-- **PBKDF2** - Hash de contraseñas seguro
+- **Plain Text Passwords** - Contraseñas almacenadas como texto plano
 
 ### Frontend
 - **Bootstrap 5** - Framework CSS via CDN
