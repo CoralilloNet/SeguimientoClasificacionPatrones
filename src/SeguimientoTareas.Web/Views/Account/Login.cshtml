@@ -1,0 +1,126 @@
+@{
+    ViewData["Title"] = "Iniciar Sesión";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white text-center">
+                <h4><i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión</h4>
+            </div>
+            <div class="card-body">
+                <form id="loginForm">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Contraseña</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt me-2"></i>Ingresar
+                        </button>
+                    </div>
+                </form>
+                
+                <div id="loginMessage" class="mt-3" style="display: none;"></div>
+            </div>
+        </div>
+        
+        <div class="mt-4 text-center">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">Credenciales de Prueba</h6>
+                    <p class="card-text text-muted">
+                        <strong>Administrador:</strong><br>
+                        Email: admin@example.com<br>
+                        Contraseña: admin
+                    </p>
+                    <p class="card-text text-muted">
+                        <strong>Usuario:</strong><br>
+                        Email: juan.perez@example.com<br>
+                        Contraseña: admin
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+$(document).ready(function() {
+    $('#loginForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const email = $('#email').val();
+        const password = $('#password').val();
+        
+        if (!email || !password) {
+            showMessage('Por favor complete todos los campos', 'danger');
+            return;
+        }
+        
+        // Disable submit button and show loading
+        const submitBtn = $(this).find('button[type="submit"]');
+        const originalText = submitBtn.html();
+        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Iniciando sesión...');
+        
+        $.ajax({
+            url: '/Account/Login',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                email: email,
+                password: password
+            }),
+            success: function(response) {
+                if (response.success) {
+                    showMessage(response.message, 'success');
+                    // Redirect to home page
+                    setTimeout(function() {
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    showMessage(response.message, 'danger');
+                    submitBtn.prop('disabled', false).html(originalText);
+                }
+            },
+            error: function() {
+                showMessage('Error al conectar con el servidor', 'danger');
+                submitBtn.prop('disabled', false).html(originalText);
+            }
+        });
+    });
+    
+    function showMessage(message, type) {
+        const messageDiv = $('#loginMessage');
+        messageDiv.removeClass('alert-success alert-danger alert-warning alert-info')
+                  .addClass('alert alert-' + type)
+                  .html('<i class="fas fa-' + getIconForType(type) + ' me-2"></i>' + message)
+                  .show();
+    }
+    
+    function getIconForType(type) {
+        switch(type) {
+            case 'success': return 'check-circle';
+            case 'danger': return 'exclamation-circle';
+            case 'warning': return 'exclamation-triangle';
+            case 'info': return 'info-circle';
+            default: return 'info-circle';
+        }
+    }
+});
+</script>
+}
