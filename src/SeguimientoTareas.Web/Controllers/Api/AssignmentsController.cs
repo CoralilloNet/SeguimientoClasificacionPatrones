@@ -124,6 +124,49 @@ namespace SeguimientoTareas.Web.Controllers.Api
             }
         }
 
+        // Admin endpoint to get all assignments - added for admin assignment management
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllAssignments()
+        {
+            try
+            {
+                const string sql = @"
+                    SELECT 
+                        a.Id, a.Title, a.Description, a.StartDate, a.DueDate, a.CreatedAt,
+                        tt.Name as TaskTemplateName,
+                        s.Name as SpecialistName,
+                        u1.FullName as AssignedToUserName,
+                        u2.FullName as AssignedByUserName
+                    FROM Assignments a
+                    INNER JOIN TaskTemplates tt ON a.TaskTemplateId = tt.Id
+                    LEFT JOIN Specialists s ON a.SpecialistId = s.Id
+                    INNER JOIN Users u1 ON a.AssignedToUserId = u1.Id
+                    INNER JOIN Users u2 ON a.AssignedByUserId = u2.Id
+                    ORDER BY a.CreatedAt DESC";
+
+                var assignments = await Db.ExecuteReaderAsync(sql, reader => new
+                {
+                    Id = reader.GetInt32(0),
+                    Title = reader.GetString(1),
+                    Description = reader.IsDBNull(2) ? null : reader.GetString(2),
+                    StartDate = reader.GetDateTime(3),
+                    DueDate = reader.IsDBNull(4) ? (DateTime?)null : reader.GetDateTime(4),
+                    CreatedAt = reader.GetDateTime(5),
+                    TaskTemplateName = reader.GetString(6),
+                    SpecialistName = reader.IsDBNull(7) ? null : reader.GetString(7),
+                    AssignedToUserName = reader.GetString(8),
+                    AssignedByUserName = reader.GetString(9)
+                });
+
+                return Ok(new ApiResponse<object> { Success = true, Data = assignments });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new ApiResponse { Success = false, Message = "Error interno del servidor" });
+            }
+        }
+
         [HttpGet("my")]
         public async Task<IActionResult> GetMyAssignments()
         {
@@ -252,6 +295,34 @@ namespace SeguimientoTareas.Web.Controllers.Api
                 };
 
                 return Ok(new ApiResponse<object> { Success = true, Data = result });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new ApiResponse { Success = false, Message = "Error interno del servidor" });
+            }
+        }
+
+        // Admin endpoint to delete assignments - added for admin assignment management
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteAssignment(int id)
+        {
+            try
+            {
+                const string sql = "DELETE FROM Assignments WHERE Id = @Id";
+
+                var rowsAffected = await Db.ExecuteNonQueryAsync(sql, Db.CreateParameter("@Id", id));
+
+                if (rowsAffected == 0)
+                {
+                    return NotFound(new ApiResponse { Success = false, Message = "Asignación no encontrada" });
+                }
+
+                return Ok(new ApiResponse { Success = true, Message = "Asignación eliminada exitosamente" });
+            }
+            catch (SqlException ex) when (ex.Number == 547) // Foreign key constraint violation
+            {
+                return BadRequest(new ApiResponse { Success = false, Message = "No se puede eliminar la asignación porque tiene datos asociados" });
             }
             catch (Exception)
             {

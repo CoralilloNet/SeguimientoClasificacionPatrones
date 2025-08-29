@@ -129,17 +129,82 @@ $(document).ready(function() {
 });
 
 function loadAssignments() {
-    // For demo purposes, we'll show a placeholder since we don't have a full list endpoint
-    // In a real implementation, you'd create a GET /api/assignments endpoint
+    // Load all assignments for admin view - updated to use new endpoint
     const tbody = $('#assignmentsTable tbody');
     tbody.html(`
         <tr>
-            <td colspan="8" class="text-center text-muted">
-                <i class="fas fa-info-circle me-2"></i>
-                Las asignaciones se muestran en el dashboard y en la vista "Mis Tareas" de cada usuario
+            <td colspan="8" class="text-center">
+                <i class="fas fa-spinner fa-spin me-2"></i>Cargando...
             </td>
         </tr>
     `);
+    
+    $.ajax({
+        url: '/api/assignments',
+        type: 'GET',
+        success: function(response) {
+            if (response.success && response.data) {
+                tbody.empty();
+                if (response.data.length === 0) {
+                    tbody.html(`
+                        <tr>
+                            <td colspan="8" class="text-center text-muted">
+                                <i class="fas fa-info-circle me-2"></i>No hay asignaciones registradas
+                            </td>
+                        </tr>
+                    `);
+                } else {
+                    response.data.forEach(function(assignment) {
+                        const startDate = new Date(assignment.startDate).toLocaleDateString();
+                        const dueDate = assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString() : 'Sin fecha límite';
+                        const specialist = assignment.specialistName || 'Sin especialista';
+                        
+                        const row = `
+                            <tr>
+                                <td><strong>${assignment.title}</strong></td>
+                                <td>${assignment.assignedToUserName}</td>
+                                <td>${assignment.taskTemplateName}</td>
+                                <td>${specialist}</td>
+                                <td>${startDate}</td>
+                                <td>${dueDate}</td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar" role="progressbar" style="width: 0%">0%</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary me-1" onclick="openEditModal(${assignment.id})" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteAssignment(${assignment.id})" title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                        tbody.append(row);
+                    });
+                }
+            } else {
+                tbody.html(`
+                    <tr>
+                        <td colspan="8" class="text-center text-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Error al cargar las asignaciones
+                        </td>
+                    </tr>
+                `);
+            }
+        },
+        error: function() {
+            tbody.html(`
+                <tr>
+                    <td colspan="8" class="text-center text-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Error al cargar las asignaciones
+                    </td>
+                </tr>
+            `);
+        }
+    });
 }
 
 function loadFormData() {
@@ -256,6 +321,34 @@ function showAlert(message, type) {
     setTimeout(function() {
         $('.alert').alert('close');
     }, 5000);
+}
+
+// Edit and delete functions - added for admin assignment management
+function openEditModal(id) {
+    // TODO: Implement edit functionality in future enhancement
+    showError('La funcionalidad de edición estará disponible en una próxima actualización');
+}
+
+function deleteAssignment(id) {
+    if (!confirm('¿Está seguro de que desea eliminar esta asignación? Esta acción no se puede deshacer.')) {
+        return;
+    }
+    
+    $.ajax({
+        url: `/api/assignments/${id}`,
+        type: 'DELETE',
+        success: function(response) {
+            if (response.success) {
+                loadAssignments();
+                showSuccess(response.message);
+            } else {
+                showError(response.message);
+            }
+        },
+        error: function() {
+            showError('Error al eliminar la asignación');
+        }
+    });
 }
 </script>
 }
