@@ -220,15 +220,30 @@ function loadFormData() {
     
     // Specialist loading removed - assignments now use users directly
     
-    // Load users (in a real app, you'd have a dedicated endpoint for this)
-    // For now, we'll add some static options based on our sample data
-    const userSelect = $('#assignmentUser');
-    userSelect.html(`
-        <option value="">Selecciona un usuario...</option>
-        <option value="2">Juan Pérez</option>
-        <option value="3">María González</option>
-        <option value="4">Carlos Rodríguez</option>
-    `);
+    // Load users from API endpoint
+    $.ajax({
+        url: '/api/users',
+        type: 'GET',
+        success: function(response) {
+            if (response.success && response.data) {
+                const userSelect = $('#assignmentUser');
+                userSelect.html('<option value="">Selecciona un usuario...</option>');
+                response.data.filter(u => u.isActive).forEach(function(user) {
+                    userSelect.append(`<option value="${user.id}">${user.fullName}</option>`);
+                });
+            }
+        },
+        error: function() {
+            // Fallback to static data if API fails
+            const userSelect = $('#assignmentUser');
+            userSelect.html(`
+                <option value="">Selecciona un usuario...</option>
+                <option value="2">Juan Pérez</option>
+                <option value="3">María González</option>
+                <option value="4">Carlos Rodríguez</option>
+            `);
+        }
+    });
 }
 
 function openCreateModal() {
