@@ -21,7 +21,7 @@
                         <th>Título</th>
                         <th>Asignado a</th>
                         <th>Plantilla</th>
-                        <th>Especialista</th>
+                        <!-- Specialist column removed -->
                         <th>Fecha Inicio</th>
                         <th>Fecha Límite</th>
                         <th>Progreso</th>
@@ -30,7 +30,7 @@
                 </thead>
                 <tbody>
                     <tr>
-                        <td colspan="8" class="text-center">
+                        <td colspan="7" class="text-center">
                             <i class="fas fa-spinner fa-spin me-2"></i>Cargando...
                         </td>
                     </tr>
@@ -75,12 +75,7 @@
                         </div>
                         
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="assignmentSpecialist" class="form-label">Especialista</label>
-                                <select class="form-select" id="assignmentSpecialist" name="specialistId">
-                                    <option value="">Sin especialista asignado</option>
-                                </select>
-                            </div>
+                            <!-- Specialist selector removed -->
                             
                             <div class="mb-3">
                                 <label for="assignmentStartDate" class="form-label">Fecha de Inicio *</label>
@@ -133,7 +128,7 @@ function loadAssignments() {
     const tbody = $('#assignmentsTable tbody');
     tbody.html(`
         <tr>
-            <td colspan="8" class="text-center">
+            <td colspan="7" class="text-center">
                 <i class="fas fa-spinner fa-spin me-2"></i>Cargando...
             </td>
         </tr>
@@ -148,7 +143,7 @@ function loadAssignments() {
                 if (response.data.length === 0) {
                     tbody.html(`
                         <tr>
-                            <td colspan="8" class="text-center text-muted">
+                            <td colspan="7" class="text-center text-muted">
                                 <i class="fas fa-info-circle me-2"></i>No hay asignaciones registradas
                             </td>
                         </tr>
@@ -157,14 +152,14 @@ function loadAssignments() {
                     response.data.forEach(function(assignment) {
                         const startDate = new Date(assignment.startDate).toLocaleDateString();
                         const dueDate = assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString() : 'Sin fecha límite';
-                        const specialist = assignment.specialistName || 'Sin especialista';
+                        // Specialist removed
                         
                         const row = `
                             <tr>
                                 <td><strong>${assignment.title}</strong></td>
                                 <td>${assignment.assignedToUserName}</td>
                                 <td>${assignment.taskTemplateName}</td>
-                                <td>${specialist}</td>
+                                <!-- Specialist column removed -->
                                 <td>${startDate}</td>
                                 <td>${dueDate}</td>
                                 <td>
@@ -188,7 +183,7 @@ function loadAssignments() {
             } else {
                 tbody.html(`
                     <tr>
-                        <td colspan="8" class="text-center text-danger">
+                        <td colspan="7" class="text-center text-danger">
                             <i class="fas fa-exclamation-triangle me-2"></i>Error al cargar las asignaciones
                         </td>
                     </tr>
@@ -198,7 +193,7 @@ function loadAssignments() {
         error: function() {
             tbody.html(`
                 <tr>
-                    <td colspan="8" class="text-center text-danger">
+                    <td colspan="7" class="text-center text-danger">
                         <i class="fas fa-exclamation-triangle me-2"></i>Error al cargar las asignaciones
                     </td>
                 </tr>
@@ -223,20 +218,7 @@ function loadFormData() {
         }
     });
     
-    // Load specialists
-    $.ajax({
-        url: '/api/specialists',
-        type: 'GET',
-        success: function(response) {
-            if (response.success && response.data) {
-                const select = $('#assignmentSpecialist');
-                select.html('<option value="">Sin especialista asignado</option>');
-                response.data.filter(s => s.active).forEach(function(specialist) {
-                    select.append(`<option value="${specialist.id}">${specialist.name}</option>`);
-                });
-            }
-        }
-    });
+    // Specialist loading removed - assignments now use users directly
     
     // Load users (in a real app, you'd have a dedicated endpoint for this)
     // For now, we'll add some static options based on our sample data
@@ -261,7 +243,7 @@ function createAssignment() {
         title: $('#assignmentTitle').val(),
         description: $('#assignmentDescription').val() || null,
         assignedToUserId: parseInt($('#assignmentUser').val()),
-        specialistId: $('#assignmentSpecialist').val() ? parseInt($('#assignmentSpecialist').val()) : null,
+        // specialistId removed - assignments now directly use users
         startDate: $('#assignmentStartDate').val(),
         dueDate: $('#assignmentDueDate').val() || null
     };

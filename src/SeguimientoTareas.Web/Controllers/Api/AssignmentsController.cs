@@ -32,11 +32,11 @@ namespace SeguimientoTareas.Web.Controllers.Api
                 
                 try
                 {
-                    // Create assignment
+                    // Create assignment - SpecialistId removed
                     const string insertAssignmentSql = @"
-                        INSERT INTO Assignments (TaskTemplateId, Title, Description, AssignedToUserId, AssignedByUserId, SpecialistId, StartDate, DueDate)
+                        INSERT INTO Assignments (TaskTemplateId, Title, Description, AssignedToUserId, AssignedByUserId, StartDate, DueDate)
                         OUTPUT INSERTED.Id
-                        VALUES (@TaskTemplateId, @Title, @Description, @AssignedToUserId, @AssignedByUserId, @SpecialistId, @StartDate, @DueDate)";
+                        VALUES (@TaskTemplateId, @Title, @Description, @AssignedToUserId, @AssignedByUserId, @StartDate, @DueDate)";
 
                     using var assignmentCmd = new SqlCommand(insertAssignmentSql, connection, transaction);
                     assignmentCmd.Parameters.AddRange(new[]
@@ -46,7 +46,7 @@ namespace SeguimientoTareas.Web.Controllers.Api
                         Db.CreateParameter("@Description", request.Description),
                         Db.CreateParameter("@AssignedToUserId", request.AssignedToUserId),
                         Db.CreateParameter("@AssignedByUserId", assignedByUserId),
-                        Db.CreateParameter("@SpecialistId", request.SpecialistId),
+                        // SpecialistId parameter removed
                         Db.CreateParameter("@StartDate", request.StartDate),
                         Db.CreateParameter("@DueDate", request.DueDate)
                     });
@@ -135,12 +135,10 @@ namespace SeguimientoTareas.Web.Controllers.Api
                     SELECT 
                         a.Id, a.Title, a.Description, a.StartDate, a.DueDate, a.CreatedAt,
                         tt.Name as TaskTemplateName,
-                        s.Name as SpecialistName,
                         u1.FullName as AssignedToUserName,
                         u2.FullName as AssignedByUserName
                     FROM Assignments a
                     INNER JOIN TaskTemplates tt ON a.TaskTemplateId = tt.Id
-                    LEFT JOIN Specialists s ON a.SpecialistId = s.Id
                     INNER JOIN Users u1 ON a.AssignedToUserId = u1.Id
                     INNER JOIN Users u2 ON a.AssignedByUserId = u2.Id
                     ORDER BY a.CreatedAt DESC";
@@ -154,9 +152,9 @@ namespace SeguimientoTareas.Web.Controllers.Api
                     DueDate = reader.IsDBNull(4) ? (DateTime?)null : reader.GetDateTime(4),
                     CreatedAt = reader.GetDateTime(5),
                     TaskTemplateName = reader.GetString(6),
-                    SpecialistName = reader.IsDBNull(7) ? null : reader.GetString(7),
-                    AssignedToUserName = reader.GetString(8),
-                    AssignedByUserName = reader.GetString(9)
+                    // SpecialistName removed
+                    AssignedToUserName = reader.GetString(7),
+                    AssignedByUserName = reader.GetString(8)
                 });
 
                 return Ok(new ApiResponse<object> { Success = true, Data = assignments });
@@ -178,11 +176,9 @@ namespace SeguimientoTareas.Web.Controllers.Api
                     SELECT 
                         a.Id, a.Title, a.Description, a.StartDate, a.DueDate, a.CreatedAt,
                         tt.Name as TaskTemplateName,
-                        s.Name as SpecialistName,
                         u.FullName as AssignedByUserName
                     FROM Assignments a
                     INNER JOIN TaskTemplates tt ON a.TaskTemplateId = tt.Id
-                    LEFT JOIN Specialists s ON a.SpecialistId = s.Id
                     INNER JOIN Users u ON a.AssignedByUserId = u.Id
                     WHERE a.AssignedToUserId = @UserId
                     ORDER BY a.CreatedAt DESC";
@@ -196,8 +192,8 @@ namespace SeguimientoTareas.Web.Controllers.Api
                     DueDate = reader.IsDBNull(4) ? (DateTime?)null : reader.GetDateTime(4),
                     CreatedAt = reader.GetDateTime(5),
                     TaskTemplateName = reader.GetString(6),
-                    SpecialistName = reader.IsDBNull(7) ? null : reader.GetString(7),
-                    AssignedByUserName = reader.GetString(8)
+                    // SpecialistName removed
+                    AssignedByUserName = reader.GetString(7)
                 }, Db.CreateParameter("@UserId", userId));
 
                 return Ok(new ApiResponse<object> { Success = true, Data = assignments });
@@ -231,17 +227,15 @@ namespace SeguimientoTareas.Web.Controllers.Api
                     return NotFound(new ApiResponse { Success = false, Message = "Asignación no encontrada" });
                 }
 
-                // Get assignment details
+                // Get assignment details - specialist removed
                 const string assignmentSql = @"
                     SELECT 
                         a.Id, a.Title, a.Description, a.StartDate, a.DueDate, a.CreatedAt,
                         tt.Name as TaskTemplateName,
-                        s.Name as SpecialistName,
                         u1.FullName as AssignedToUserName,
                         u2.FullName as AssignedByUserName
                     FROM Assignments a
                     INNER JOIN TaskTemplates tt ON a.TaskTemplateId = tt.Id
-                    LEFT JOIN Specialists s ON a.SpecialistId = s.Id
                     INNER JOIN Users u1 ON a.AssignedToUserId = u1.Id
                     INNER JOIN Users u2 ON a.AssignedByUserId = u2.Id
                     WHERE a.Id = @Id";
@@ -255,9 +249,9 @@ namespace SeguimientoTareas.Web.Controllers.Api
                     DueDate = reader.IsDBNull(4) ? (DateTime?)null : reader.GetDateTime(4),
                     CreatedAt = reader.GetDateTime(5),
                     TaskTemplateName = reader.GetString(6),
-                    SpecialistName = reader.IsDBNull(7) ? null : reader.GetString(7),
-                    AssignedToUserName = reader.GetString(8),
-                    AssignedByUserName = reader.GetString(9)
+                    // SpecialistName removed
+                    AssignedToUserName = reader.GetString(7),
+                    AssignedByUserName = reader.GetString(8)
                 }, Db.CreateParameter("@Id", id));
 
                 // Get stages
@@ -337,7 +331,7 @@ namespace SeguimientoTareas.Web.Controllers.Api
         public string Title { get; set; } = string.Empty;
         public string? Description { get; set; }
         public int AssignedToUserId { get; set; }
-        public int? SpecialistId { get; set; }
+        // SpecialistId removed - assignments now directly use Users
         public DateTime StartDate { get; set; }
         public DateTime? DueDate { get; set; }
     }

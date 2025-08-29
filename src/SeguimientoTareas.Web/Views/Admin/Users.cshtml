@@ -1,0 +1,321 @@
+@{
+    ViewData["Title"] = "Gestión de Usuarios";
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-users me-2"></i>Gestión de Usuarios</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#userModal" onclick="openCreateModal()">
+            <i class="fas fa-plus me-2"></i>Nuevo Usuario
+        </button>
+    </div>
+</div>
+
+<!-- Users Table -->
+<div class="card shadow">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" id="usersTable">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Nombre Completo</th>
+                        <th>Email</th>
+                        <th>Tipo</th>
+                        <th>Estado</th>
+                        <th>Fecha Creación</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    <tr>
+                        <td colspan="6" class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- User Modal -->
+<div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="userModalLabel">
+                    <i class="fas fa-plus me-2"></i>Nuevo Usuario
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="userForm">
+                <div class="modal-body">
+                    <input type="hidden" id="userId" name="id">
+                    
+                    <div class="mb-3">
+                        <label for="userFullName" class="form-label">Nombre Completo *</label>
+                        <input type="text" class="form-control" id="userFullName" name="fullName" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="userEmail" class="form-label">Email *</label>
+                        <input type="email" class="form-control" id="userEmail" name="email" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="userIsAdmin" name="isAdmin">
+                            <label class="form-check-label" for="userIsAdmin">
+                                Es Administrador
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3" id="userActiveDiv" style="display: none;">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="userActive" name="isActive" checked>
+                            <label class="form-check-label" for="userActive">
+                                Usuario Activo
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Password display area - only shown after creation -->
+                    <div class="alert alert-info" id="passwordAlert" style="display: none;">
+                        <h6><i class="fas fa-key me-2"></i>Contraseña Generada:</h6>
+                        <p class="mb-0"><strong id="generatedPassword"></strong></p>
+                        <small class="text-muted">Comparta esta contraseña con el usuario. Solo se mostrará una vez.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="saveUser()">
+                        <i class="fas fa-save me-2"></i>Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Success/Error Messages -->
+<div class="toast-container position-fixed top-0 end-0 p-3">
+    <div id="successToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-success text-white">
+            <i class="fas fa-check-circle me-2"></i>
+            <strong class="me-auto">Éxito</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="successMessage"></div>
+    </div>
+</div>
+
+<div class="toast-container position-fixed top-0 end-0 p-3">
+    <div id="errorToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-danger text-white">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong class="me-auto">Error</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="errorMessage"></div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+$(document).ready(function() {
+    loadUsers();
+});
+
+function loadUsers() {
+    const tbody = $('#usersTableBody');
+    
+    $.ajax({
+        url: '/api/users',
+        type: 'GET',
+        success: function(response) {
+            tbody.empty();
+            
+            if (response.success && response.data) {
+                if (response.data.length === 0) {
+                    tbody.html(`
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">
+                                <i class="fas fa-inbox me-2"></i>No hay usuarios registrados
+                            </td>
+                        </tr>
+                    `);
+                } else {
+                    response.data.forEach(function(user) {
+                        const row = `
+                            <tr>
+                                <td>${user.fullName}</td>
+                                <td>${user.email}</td>
+                                <td>
+                                    <span class="badge ${user.isAdmin ? 'bg-danger' : 'bg-secondary'}">
+                                        ${user.isAdmin ? 'Administrador' : 'Usuario'}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge ${user.isActive ? 'bg-success' : 'bg-secondary'}">
+                                        ${user.isActive ? 'Activo' : 'Inactivo'}
+                                    </span>
+                                </td>
+                                <td>${new Date(user.createdAt).toLocaleDateString()}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary me-1" onclick="openEditModal(${user.id})" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${user.id})" title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                        tbody.append(row);
+                    });
+                }
+            } else {
+                tbody.html(`
+                    <tr>
+                        <td colspan="6" class="text-center text-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Error al cargar los usuarios
+                        </td>
+                    </tr>
+                `);
+            }
+        },
+        error: function() {
+            tbody.html(`
+                <tr>
+                    <td colspan="6" class="text-center text-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Error al cargar los usuarios
+                    </td>
+                </tr>
+            `);
+        }
+    });
+}
+
+function openCreateModal() {
+    $('#userForm')[0].reset();
+    $('#userId').val('');
+    $('#userActiveDiv').hide();
+    $('#passwordAlert').hide();
+    $('#userModalLabel').html('<i class="fas fa-plus me-2"></i>Nuevo Usuario');
+    $('#userModal').modal('show');
+}
+
+function openEditModal(id) {
+    const row = $(`button[onclick="openEditModal(${id})"]`).closest('tr');
+    const fullName = row.find('td:nth-child(1)').text();
+    const email = row.find('td:nth-child(2)').text();
+    const isAdmin = row.find('td:nth-child(3) .badge').hasClass('bg-danger');
+    const isActive = row.find('td:nth-child(4) .badge').hasClass('bg-success');
+    
+    $('#userId').val(id);
+    $('#userFullName').val(fullName);
+    $('#userEmail').val(email);
+    $('#userIsAdmin').prop('checked', isAdmin);
+    $('#userActive').prop('checked', isActive);
+    $('#userActiveDiv').show();
+    $('#passwordAlert').hide();
+    $('#userModalLabel').html('<i class="fas fa-edit me-2"></i>Editar Usuario');
+    
+    $('#userModal').modal('show');
+}
+
+function saveUser() {
+    const id = $('#userId').val();
+    const data = {
+        fullName: $('#userFullName').val(),
+        email: $('#userEmail').val(),
+        isAdmin: $('#userIsAdmin').is(':checked')
+    };
+    
+    if (id) {
+        // Update existing user
+        data.isActive = $('#userActive').is(':checked');
+    }
+    
+    if (!data.fullName.trim() || !data.email.trim()) {
+        showError('Nombre completo y email son requeridos');
+        return;
+    }
+    
+    const url = id ? `/api/users/${id}` : '/api/users';
+    const method = id ? 'PUT' : 'POST';
+    
+    $.ajax({
+        url: url,
+        type: method,
+        contentType: 'application/json',
+        data: JSON.stringify(data),
+        success: function(response) {
+            if (response.success) {
+                if (!id && response.data && response.data.generatedPassword) {
+                    // Show generated password for new user
+                    $('#generatedPassword').text(response.data.generatedPassword);
+                    $('#passwordAlert').show();
+                    
+                    // Don't close modal immediately, let admin see the password
+                    showSuccess(response.message);
+                    
+                    // Change save button to close button
+                    $('.modal-footer .btn-primary').html('<i class="fas fa-times me-2"></i>Cerrar').attr('onclick', 'closeModalAndReload()');
+                } else {
+                    $('#userModal').modal('hide');
+                    showSuccess(response.message);
+                }
+                loadUsers();
+            } else {
+                showError(response.message);
+            }
+        },
+        error: function() {
+            showError('Error al guardar el usuario');
+        }
+    });
+}
+
+function closeModalAndReload() {
+    $('#userModal').modal('hide');
+    // Reset the save button for next time
+    $('.modal-footer .btn-primary').html('<i class="fas fa-save me-2"></i>Guardar').attr('onclick', 'saveUser()');
+}
+
+function deleteUser(id) {
+    if (!confirm('¿Está seguro de que desea eliminar este usuario?')) {
+        return;
+    }
+    
+    $.ajax({
+        url: `/api/users/${id}`,
+        type: 'DELETE',
+        success: function(response) {
+            if (response.success) {
+                loadUsers();
+                showSuccess(response.message);
+            } else {
+                showError(response.message);
+            }
+        },
+        error: function() {
+            showError('Error al eliminar el usuario');
+        }
+    });
+}
+
+function showSuccess(message) {
+    $('#successMessage').text(message);
+    new bootstrap.Toast($('#successToast')).show();
+}
+
+function showError(message) {
+    $('#errorMessage').text(message);
+    new bootstrap.Toast($('#errorToast')).show();
+}
+</script>
+}
