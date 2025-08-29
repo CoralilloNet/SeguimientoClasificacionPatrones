@@ -17,12 +17,19 @@ namespace SeguimientoTareas.Web.Controllers.Api
             {
                 // Get total tasks stats
                 const string statsQuery = @"
-                    SELECT 
-                        COUNT(*) as TotalTasks,
-                        SUM(CASE WHEN EXISTS(SELECT 1 FROM AssignmentStages WHERE AssignmentId = a.Id AND IsComplete = 0) THEN 1 ELSE 0 END) as InProgressTasks,
-                        SUM(CASE WHEN NOT EXISTS(SELECT 1 FROM AssignmentStages WHERE AssignmentId = a.Id AND IsComplete = 0) THEN 1 ELSE 0 END) as CompletedTasks,
-                        SUM(CASE WHEN EXISTS(SELECT 1 FROM AssignmentStages WHERE AssignmentId = a.Id AND IsComplete = 0 AND TargetDate < CAST(GETDATE() AS DATE)) THEN 1 ELSE 0 END) as OverdueTasks
-                    FROM Assignments a";
+                   SELECT
+    COUNT(*) AS TotalTasks,
+    SUM(CASE WHEN s.IncompleteCount > 0 THEN 1 ELSE 0 END) AS InProgressTasks,
+    SUM(CASE WHEN s.IncompleteCount = 0 THEN 1 ELSE 0 END) AS CompletedTasks,
+    SUM(CASE WHEN s.OverdueCount > 0 THEN 1 ELSE 0 END) AS OverdueTasks
+FROM Assignments a
+OUTER APPLY (
+    SELECT 
+        COUNT(*) AS IncompleteCount,
+        SUM(CASE WHEN IsComplete = 0 AND TargetDate < CAST(GETDATE() AS DATE) THEN 1 ELSE 0 END) AS OverdueCount
+    FROM AssignmentStages 
+    WHERE AssignmentId = a.Id AND IsComplete = 0
+) s";
 
                 var stats = await Db.ExecuteReaderSingleAsync(statsQuery, reader => new
                 {
@@ -35,18 +42,26 @@ namespace SeguimientoTareas.Web.Controllers.Api
                 // Get user summaries
                 const string userQuery = @"
                     SELECT 
-                        u.Id,
-                        u.FullName,
-                        COUNT(a.Id) as TotalTasks,
-                        SUM(CASE WHEN EXISTS(SELECT 1 FROM AssignmentStages WHERE AssignmentId = a.Id AND IsComplete = 0) THEN 1 ELSE 0 END) as InProgressTasks,
-                        SUM(CASE WHEN NOT EXISTS(SELECT 1 FROM AssignmentStages WHERE AssignmentId = a.Id AND IsComplete = 0) THEN 1 ELSE 0 END) as CompletedTasks,
-                        SUM(CASE WHEN EXISTS(SELECT 1 FROM AssignmentStages WHERE AssignmentId = a.Id AND IsComplete = 0 AND TargetDate < CAST(GETDATE() AS DATE)) THEN 1 ELSE 0 END) as OverdueTasks,
-                        ISNULL(AVG(CAST((SELECT AVG(CAST(ProgressPercent AS FLOAT)) FROM AssignmentStages WHERE AssignmentId = a.Id) AS FLOAT)), 0) as AverageProgress
-                    FROM Users u
-                    LEFT JOIN Assignments a ON u.Id = a.AssignedToUserId
-                    WHERE u.IsActive = 1 AND u.IsAdmin = 0
-                    GROUP BY u.Id, u.FullName
-                    ORDER BY u.FullName";
+    u.Id,
+    u.FullName,
+    COUNT(a.Id) AS TotalTasks,
+    SUM(CASE WHEN s.IncompleteCount > 0 THEN 1 ELSE 0 END) AS InProgressTasks,
+    SUM(CASE WHEN s.IncompleteCount = 0 THEN 1 ELSE 0 END) AS CompletedTasks,
+    SUM(CASE WHEN s.OverdueCount > 0 THEN 1 ELSE 0 END) AS OverdueTasks,
+    ISNULL(AVG(s.AvgProgress), 0) AS AverageProgress
+FROM Users u
+LEFT JOIN Assignments a ON u.Id = a.AssignedToUserId
+OUTER APPLY (
+    SELECT 
+        COUNT(*) AS IncompleteCount,
+        SUM(CASE WHEN IsComplete = 0 AND TargetDate < CAST(GETDATE() AS DATE) THEN 1 ELSE 0 END) AS OverdueCount,
+        AVG(CAST(ProgressPercent AS FLOAT)) AS AvgProgress
+    FROM AssignmentStages 
+    WHERE AssignmentId = a.Id
+) s
+WHERE u.IsActive = 1 AND u.IsAdmin = 0
+GROUP BY u.Id, u.FullName
+ORDER BY u.FullName";
 
                 var userSummaries = await Db.ExecuteReaderAsync(userQuery, reader => new UserTaskSummary
                 {
