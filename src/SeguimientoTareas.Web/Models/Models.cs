@@ -11,14 +11,7 @@ namespace SeguimientoTareas.Web.Models
         public DateTime CreatedAt { get; set; }
     }
 
-    public class Specialist
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string? Email { get; set; }
-        public bool Active { get; set; }
-        public DateTime CreatedAt { get; set; }
-    }
+    // Specialist class removed - assignments now directly use Users
 
     public class TaskTemplate
     {
@@ -48,7 +41,7 @@ namespace SeguimientoTareas.Web.Models
         public string? Description { get; set; }
         public int AssignedToUserId { get; set; }
         public int AssignedByUserId { get; set; }
-        public int? SpecialistId { get; set; }
+        // SpecialistId removed - assignments now directly use Users
         public DateTime CreatedAt { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime? DueDate { get; set; }
@@ -56,7 +49,7 @@ namespace SeguimientoTareas.Web.Models
         // Navigation properties
         public User? AssignedToUser { get; set; }
         public User? AssignedByUser { get; set; }
-        public Specialist? Specialist { get; set; }
+        // Specialist navigation property removed
         public TaskTemplate? TaskTemplate { get; set; }
         public List<AssignmentStage> Stages { get; set; } = new List<AssignmentStage>();
     }

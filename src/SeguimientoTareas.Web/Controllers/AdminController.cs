@@ -11,10 +11,17 @@ namespace SeguimientoTareas.Web.Controllers
             return View();
         }
 
-        public IActionResult Specialists()
+        // Users action added for admin user management
+        public IActionResult Users()
         {
             return View();
         }
+
+        // Specialists view removed - functionality replaced by Users
+        // public IActionResult Specialists()
+        // {
+        //     return View();
+        // }
 
         public IActionResult Tasks()
         {
